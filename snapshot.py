@@ -90,36 +90,34 @@ def main():
     blockLatest = w3.eth.get_block('latest')
     latestBlockNum=  str(blockLatest['number'])
 
-    '''
+    
     pageNum = 1
     resp = BRNFTTransactionsFetch(brnft_address, startBlockNum, latestBlockNum, pageNum, offset=10000)
     
     while(resp['completed'] == False):
         startBlockNum = resp['nextStartBlock']
         resp = BRNFTTransactionsFetch(brnft_address, startBlockNum, latestBlockNum, pageNum, offset=10000)
-    '''
+    
 
     # after fetching wallet addresses loop through each wallet address and find the contract balance
     # using Ticket contract abi
     print("Total revelavant addresses: ", len(wallet_addresses))
-    print("Addresses: " , wallet_addresses)
 
     # Saving the wallet addresses to a CSV file using numpy
     npWalletAddress = np.array([wallet_addresses])
     transposedNPWalletAddres = npWalletAddress.T
-    np.savetxt("addresses2.csv", transposedNPWalletAddres, delimiter=",", fmt="%s")
+    np.savetxt("addresses.csv", transposedNPWalletAddres, delimiter=",", fmt="%s")
     
     print("Relevant wallet addresses saved to addresses.csv")
     print("Getting TOWER Ticket details for each addresses")
     fetchTicketDetails(ticket_contract)
 
 def fetchTicketDetails(ticket_contract):
-    print("In function fetchTicketDetails")
     wallet_addresses = []
 
+    # Read from previously saved CSV files
     with open("addresses.csv", "r") as f:
         addresses = f.readlines()
-        print(len(addresses))
         for addr in addresses:
             addr = addr.strip()
             wallet_addresses.append(addr)
@@ -144,35 +142,40 @@ def fetchTicketDetails(ticket_contract):
             elif(address == "0xe0a9e5b59701a776575fdd6257c3f89ae362629a"):
                 continue
             else:
-                address = Web3.toChecksumAddress(address)
-                walletNFTBalance = ticket_contract.functions.balanceOf(address).call()
-                time.sleep(2)
-                # if the wallet address has NFTs, then its balance should have been > 0
-                if(walletNFTBalance > 0):
-                    for tokenIndex in range(walletNFTBalance):
-                        tokenId = ticket_contract.functions.tokenOfOwnerByIndex(address, tokenIndex).call()
-                        time.sleep(2)
-                        TOKEN_METADATA_URL = BASE_METADATA_URL + str(tokenId)
-                        tokenMetadataResponse = requests.get(TOKEN_METADATA_URL)
+                try:
+                    address = Web3.toChecksumAddress(address)
+                    walletNFTBalance = ticket_contract.functions.balanceOf(address).call()
+                    time.sleep(10)
+                    # if the wallet address has NFTs, then its balance should have been > 0
+                    if(walletNFTBalance > 0):
+                        print("Wallet address: %s \t NFT Count: %d" % (address, walletNFTBalance))
+                        for tokenIndex in range(walletNFTBalance):
+                            tokenId = ticket_contract.functions.tokenOfOwnerByIndex(address, tokenIndex).call()
+                            time.sleep(10)
+                            TOKEN_METADATA_URL = BASE_METADATA_URL + str(tokenId)
+                            tokenMetadataResponse = requests.get(TOKEN_METADATA_URL)
 
-                        if (tokenMetadataResponse.status_code == 200):
-                            tokenMetadata = tokenMetadataResponse.json()
-                            if(tokenMetadata['name'] == 'Gold TOWER Ticket'):
-                                goldTicketCount = goldTicketCount + 1
-                            elif(tokenMetadata['name'] == 'Silver TOWER Ticket'):
-                                silverTicketCount = silverTicketCount + 1
-                            elif(tokenMetadata['name'] == 'Bronze TOWER Ticket'):
-                                bronzeTicketCount = bronzeTicketCount + 1
+                            if (tokenMetadataResponse.status_code == 200):
+                                tokenMetadata = tokenMetadataResponse.json()
+                                if(tokenMetadata['name'] == 'Gold TOWER Ticket'):
+                                    goldTicketCount = goldTicketCount + 1
+                                elif(tokenMetadata['name'] == 'Silver TOWER Ticket'):
+                                    silverTicketCount = silverTicketCount + 1
+                                elif(tokenMetadata['name'] == 'Bronze TOWER Ticket'):
+                                    bronzeTicketCount = bronzeTicketCount + 1
+                                else:
+                                    continue
                             else:
                                 continue
-                        else:
-                            continue
 
-                    print("Wallet %s has gold: %d , silver: %d , bronze: %d" %(address, goldTicketCount, silverTicketCount, bronzeTicketCount))
-                    walletRecord = [address, goldTicketCount, silverTicketCount, bronzeTicketCount]
-                    writer.writerow(walletRecord)
+                        print("Wallet %s has gold: %d , silver: %d , bronze: %d" %(address, goldTicketCount, silverTicketCount, bronzeTicketCount))
+                        walletRecord = [address, goldTicketCount, silverTicketCount, bronzeTicketCount]
+                        writer.writerow(walletRecord)
 
-                else:
+                    else:
+                        continue
+                except:
+                    print("There was an error processing the wallet address: ", address)
                     continue
     
 if __name__ == "__main__":
