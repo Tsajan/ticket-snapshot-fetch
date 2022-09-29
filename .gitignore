@@ -4,3 +4,6 @@
 *.cfg
 .env
 *.csv
+/etc
+/share
+.ipynb_checkpoints
