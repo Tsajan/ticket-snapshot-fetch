@@ -7,6 +7,7 @@ from web3 import Web3
 import requests
 from web3.middleware import geth_poa_middleware
 from dotenv import dotenv_values
+from datetime import datetime
 
 config = dotenv_values('.env')
 wallet_addresses = []
@@ -27,9 +28,13 @@ def loadContractABI():
 
 def main():
     startTime = time.time()
-    print("Start time: ", startTime)
+    dateToday = datetime.today().strftime("%Y%m%d")
+    outputFile = 'ticketMapping' + dateToday + '.csv'
     bsc_provider = config['BSC_PROVIDER_URL']
     brnft_address = config['BRNFT_CONTRACT_ADDRESS']
+
+    print("Start time: ", startTime)
+    print("Writing results to: ", outputFile)
 
     w3 = Web3(Web3.HTTPProvider(bsc_provider))
     # we need to use a middleware since BSC is a PoA consensus chain
@@ -40,17 +45,20 @@ def main():
     ticket_contract = w3.eth.contract(address=brnft_contract_address, abi=brnft_contract_abi)
 
     # write the header row
-    with open("ticketMapping.csv", "w") as file:
+    with open(outputFile, "w") as file:
         writer = csv.writer(file)
         writer.writerow(header_row)
 
+    # hard-coded values for bronze tickets that were checked with BRNFT values; limit specified by its contract
     bronzeTicketRange = range(100300227506, 100300228106)
     print("Length of bronzeTicketRange is: ", len(bronzeTicketRange))
 
+    # hard-coded values for silver ticket that were checked with BRNFT values; limit specified by its contract
     silverTicketRange = range(100300228427, 100300228727)
     print("Length of silver ticket range is: ", len(silverTicketRange))
 
-    goldTicketRange = range(100300228731, 100300228833)
+    # hard-coded values for gold tickets that were checked with BRNFT values; limit specified by its contract
+    goldTicketRange = range(100300228731, 100300228834)
     print("Length of gold ticket range is: ", len(goldTicketRange))
 
     for bronzeTicket in bronzeTicketRange:
@@ -67,7 +75,7 @@ def main():
     # print the data rows
     print(data_rows)
 
-    with open("ticketMapping.csv", "a") as file:
+    with open(outputFile, "a") as file:
         writer = csv.writer(file)
         for row in data_rows:
             writer.writerow(row)
