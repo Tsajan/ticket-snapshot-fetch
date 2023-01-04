@@ -29,12 +29,13 @@ def loadContractABI():
 def main():
     startTime = time.time()
     dateToday = datetime.today().strftime("%Y%m%d")
-    outputFile = 'ticketMapping' + dateToday + '.csv'
+    ticketMapper = 'ticketMapping' + dateToday + '.csv'
+    outputFile = 'ticketBinance' + dateToday + '.csv'
     bsc_provider = config['BSC_PROVIDER_URL']
     brnft_address = config['BRNFT_CONTRACT_ADDRESS']
 
     print("Start time: ", startTime)
-    print("Writing results to: ", outputFile)
+    print("Writing results to: ", ticketMapper)
 
     w3 = Web3(Web3.HTTPProvider(bsc_provider))
     # we need to use a middleware since BSC is a PoA consensus chain
@@ -45,7 +46,7 @@ def main():
     ticket_contract = w3.eth.contract(address=brnft_contract_address, abi=brnft_contract_abi)
 
     # write the header row
-    with open(outputFile, "w") as file:
+    with open(ticketMapper, "w") as file:
         writer = csv.writer(file)
         writer.writerow(header_row)
 
@@ -75,10 +76,28 @@ def main():
     # print the data rows
     print(data_rows)
 
-    with open(outputFile, "a") as file:
+    with open(ticketMapper, "a") as file:
         writer = csv.writer(file)
         for row in data_rows:
             writer.writerow(row)
+
+    print("Data has been written to the file successfully!")
+
+    # Load the file into a dataframe to do aggregation
+    binanceDF = pd.read_csv(ticketMapper, header=0)
+    binanceDF = binanceDF.drop(['TokenId'], axis=1)
+
+    # Sum up counts into new columns
+    binanceDF['bGoldTickets'] = binanceDF.groupby(["Wallet"])["isGold"].transform("sum")
+    binanceDF['bSilverTickets'] = binanceDF.groupby(["Wallet"])["isSilver"].transform("sum")
+    binanceDF['bBronzeTickets'] = binanceDF.groupby(["Wallet"])["isBronze"].transform("sum")
+
+    # Remove duplicates and unused columns
+    binanceDF = binanceDF.drop(['isGold', 'isSilver', 'isBronze'], axis=1)
+    binanceDF = binanceDF.drop_duplicates()
+
+    # Export to CSV file
+    binanceDF.to_csv(outputFile, index=False)
 
     endTime = time.time()
     print("End time is: ", endTime)
