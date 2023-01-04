@@ -13,7 +13,7 @@ config = dotenv_values('.env')
 wallet_addresses = []
 BASE_METADATA_URL = 'https://public.nftstatic.com/static/nft/BSC/BRNFT/'
 
-header_row = ['TokenId', 'WalletAddr', 'isGold', 'isSilver', 'isBronze']
+header_row = ['TokenId', 'Wallet', 'isGold', 'isSilver', 'isBronze']
 
 data_rows = []
 
